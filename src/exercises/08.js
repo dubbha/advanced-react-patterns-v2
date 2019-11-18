@@ -2,6 +2,7 @@
 
 import React from 'react'
 import {Switch} from '../switch'
+import { flow } from 'lodash' // for the more functional example, since I know lodash is installed anyway
 
 const callAll = (...fns) => (...args) =>
   fns.forEach(fn => fn && fn(...args))
@@ -29,8 +30,9 @@ class Toggle extends React.Component {
     onReset: () => {},
     // 🐨 let's add a default stateReducer here. It should return
     // the changes object as it is passed.
+    stateReducer: (state, changes) => changes
   }
-  initialState = {on: this.props.initialOn}
+  initialState = { on: this.props.initialOn }
   state = this.initialState
   // 🐨 let's add a method here called `internalSetState`. It will simulate
   // the same API as `setState(updater, callback)`:
@@ -48,12 +50,39 @@ class Toggle extends React.Component {
   //
   // 🐨 Finally, update all pre-existing instances of this.setState
   // to this.internalSetState
+  internalSetState(changes, callback) {
+    this.setState(curState => {
+        // const changesObject = changes instanceof Function  // typeof updater === 'function'
+        //   ? changes(curState)
+        //   : changes
+        // const reducedChanges = this.props.stateReducer(curState, changesObject) || {}; // doesn't blow up if they return null from their stateReducer
+        // return Object.keys(reducedChanges).length ? reducedChanges : null
+
+        // A more functional alternative, no intermediate vars,
+        // wrapping changes into array to be able to map,
+        // don't forget to return the [0]th element in the end,
+        // somewhat confusing but elegant
+        // return [changes]
+        //   .map(c => c instanceof Function ? c(curState) : c)
+        //   .map(c => this.props.stateReducer(curState, c) || {})
+        //   .map(c => Object.keys(c).length ? c : null)[0]
+
+        // An even more functional using flow from lodash
+        return flow(
+          c => c instanceof Function ? c(curState) : c,
+          c => this.props.stateReducer(curState, c) || {},
+          c => Object.keys(c).length ? c : null
+        )(changes)
+      },
+      callback)
+  }
+
   reset = () =>
-    this.setState(this.initialState, () =>
+    this.internalSetState(this.initialState, () =>
       this.props.onReset(this.state.on),
     )
   toggle = () =>
-    this.setState(
+    this.internalSetState(
       ({on}) => ({on: !on}),
       () => this.props.onToggle(this.state.on),
     )
