@@ -1,20 +1,47 @@
 import React from 'react'
+import {Switch} from '../switch'
 import {renderToggle} from '../../test/utils'
-import Usage from '../exercises-final/11'   // there's a mismatch of tests
-// import Usage from '../exercises/11'
+// import Usage, {Toggle} from '../exercises-final/11'
+import Usage, {Toggle} from '../exercises/11'
 
 test('renders a toggle component', () => {
-  const handleToggle = jest.fn()
-  const {toggleButton, toggle, container} = renderToggle(
-    <Usage onToggle={handleToggle} />,
-  )
+  const {toggleButton, toggle, container} = renderToggle(<Usage />)
   expect(toggleButton).toBeOff()
-  expect(container).toHaveTextContent('The button is off')
+  expect(container.firstChild).toMatchSnapshot()
   toggle()
   expect(toggleButton).toBeOn()
-  expect(container).toHaveTextContent('The button is on')
+  expect(container.firstChild).toMatchSnapshot()
+})
+
+test('can still use the render prop API', () => {
+  jest.spyOn(console, 'error').mockImplementation(() => {})
+  const handleToggle = jest.fn()
+  let toggleButton, toggle
+  try {
+    const utils = renderToggle(
+      <Toggle onToggle={handleToggle}>
+        {({on, toggle}) => <Switch on={on} onClick={toggle} />}
+      </Toggle>,
+    )
+    toggleButton = utils.toggleButton
+    toggle = utils.toggle
+  } catch (error) {
+    if (
+      error.message.includes('Unable to find the Switch component.')
+    ) {
+      console.log(
+        `💯  If you'd like, go ahead and try to preserve the render prop API.`,
+      )
+      return
+    }
+    throw error
+  }
+  expect(toggleButton).toBeOff()
+  toggle()
+  expect(toggleButton).toBeOn()
   expect(handleToggle).toHaveBeenCalledTimes(1)
   expect(handleToggle).toHaveBeenCalledWith(true)
+  console.error.mockRestore()
 })
 
 //////// Elaboration & Feedback /////////
